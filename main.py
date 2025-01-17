@@ -3,69 +3,64 @@ import glob
 from fpdf import FPDF
 from pathlib import Path
 
-# Create a list of all the filepaths in the Invoices folder
-filepaths = glob.glob('Invoices/*.xlsx')
 
-# Loop through each filepath
-for filepath in filepaths:
-    if Path(filepath).name.startswith('~$'):
-        continue
+def generate(invoices_path, pdfs_path, product_id, product_name, amount_purchased, price_per_unit, total_price):
+    filepaths = glob.glob(f"{invoices_path}/*.xlsx")
 
-# Create a PDF object
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
-    pdf.add_page()
+    for filepath in filepaths:
 
-# Set the title of the PDF
-    filename = Path(filepath).stem
-    InvoiceName, Date = filename.split("-")
+        pdf = FPDF(orientation="P", unit="mm", format="A4")
+        pdf.add_page()
 
-# Add Invoice name to the PDF
-    pdf.set_font(family="Times", size=16, style="B")
-    pdf.cell(w=50, h=10, txt=f"Invoice nr: {InvoiceName}", border=0, ln=1, align="L")
+        filename = Path(filepath).stem
+        invoice_nr, date = filename.split("-")
 
-# Add a Date to the PDF
-    pdf.set_font(family="Times", size=16, style="B")
-    pdf.cell(w=50, h=10, txt=f"Date: {Date}", border=0, align="L", ln=1)
+        pdf.set_font(family="Times", size=16, style="B")
+        pdf.cell(w=50, h=8, text=f"Invoice nr.{invoice_nr}", ln=1)
 
-#Add column names to the PDF
-    df = pd.read_excel(filepath, sheet_name="Sheet 1")
-    raw_column_names = df.columns
-    column_names = [name.replace("_", " ").title() for name in raw_column_names]
+        pdf.set_font(family="Times", size=16, style="B")
+        pdf.cell(w=50, h=8, text=f"Date: {date}", ln=1)
 
-    pdf.set_font(family="Times", size=12, style="B")
-    pdf.cell(w=30, h=10, txt=column_names[0], border=1)
-    pdf.cell(w=60, h=10, txt=column_names[1], border=1)
-    pdf.cell(w=40, h=10, txt=column_names[2], border=1)
-    pdf.cell(w=30, h=10, txt=column_names[3], border=1)
-    pdf.cell(w=30, h=10, txt=column_names[4], border=1, ln=1)
+        df = pd.read_excel(filepath, sheet_name="Sheet 1")
 
-# Add the data to the PDF
-    for index,row in df.iterrows():
-        pdf.set_font(family="Times", size=12)
+        # Add a header
+        columns = df.columns
+        columns = [item.replace("_", " ").title() for item in columns]
+        pdf.set_font(family="Times", size=10, style="B")
         pdf.set_text_color(80, 80, 80)
-        pdf.cell(w=30, h=10, txt=str(row[raw_column_names[0]]), border=1)
-        pdf.cell(w=60, h=10, txt=str(row[raw_column_names[1]]), border=1)
-        pdf.cell(w=40, h=10, txt=str(row[raw_column_names[2]]), border=1)
-        pdf.cell(w=30, h=10, txt=str(row[raw_column_names[3]]), border=1)
-        pdf.cell(w=30, h=10, txt=str(row[raw_column_names[4]]), border=1, ln=1)
+        pdf.cell(w=30, h=8, text=columns[0], border=1)
+        pdf.cell(w=70, h=8, text=columns[1], border=1)
+        pdf.cell(w=30, h=8, text=columns[2], border=1)
+        pdf.cell(w=30, h=8, text=columns[3], border=1)
+        pdf.cell(w=30, h=8, text=columns[4], border=1, ln=1)
 
-# Add the total price to the PDF
-    Sum_Total_Price = df['total_price'].sum()
+        # Add rows to the table
+        for index, row in df.iterrows():
+            pdf.set_font(family="Times", size=10)
+            pdf.set_text_color(80, 80, 80)
+            pdf.cell(w=30, h=8, text=str(row[product_id]), border=1)
+            pdf.cell(w=70, h=8, text=str(row[product_name]), border=1)
+            pdf.cell(w=30, h=8, text=str(row[amount_purchased]), border=1)
+            pdf.cell(w=30, h=8, text=str(row[price_per_unit]), border=1)
+            pdf.cell(w=30, h=8, text=str(row[total_price]), border=1, ln=1)
 
-    pdf.cell(w=30, h=10, txt="", border=1)
-    pdf.cell(w=60, h=10, txt="", border=1)
-    pdf.cell(w=40, h=10, txt="", border=1)
-    pdf.cell(w=30, h=10, txt="", border=1)
-    pdf.cell(w=30, h=10, txt=str(Sum_Total_Price), border=1, ln=1)
+        total_sum = df[total_price].sum()
+        pdf.set_font(family="Times", size=10)
+        pdf.set_text_color(80, 80, 80)
+        pdf.cell(w=30, h=8, text="", border=1)
+        pdf.cell(w=70, h=8, text="", border=1)
+        pdf.cell(w=30, h=8, text="", border=1)
+        pdf.cell(w=30, h=8, text="", border=1)
+        pdf.cell(w=30, h=8, text=str(total_sum), border=1, ln=1)
 
-#Add total sum sentence
-    pdf.set_font(family="Times", size=12, style="B")
-    pdf.cell(w=30, h=8, txt=f"The total price is {Sum_Total_Price} ", border=0, ln=2)
+        # Add total sum sentence
+        pdf.set_font(family="Times", size=10, style="B")
+        pdf.cell(w=30, h=8, text=f"The total price is {total_sum}", ln=1)
 
-    #Add Company logo
-    pdf.set_font(family="Times", size=14, style="B")
-    pdf.cell(w=35, h=10, txt="KanTech Labs", border=0)
-    pdf.image("KanTech Logo.png",w=10)
+        # Add company name and logo
+        pdf.set_font(family="Times", size=14, style="B")
+        pdf.cell(w=25, h=8, text=f"PythonHow")
+        pdf.image("pythonhow.png", w=10)
 
-# Save the PDF
-    pdf.output(f"PDFs/{filename}.pdf")
+
+        pdf.output(f"{pdfs_path}/{filename}.pdf")
